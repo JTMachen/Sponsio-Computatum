@@ -10,7 +10,10 @@ warnings.filterwarnings('ignore')
 
 
 def hockey_bet():
+    # Pull in url for schedule
+    # TODO: Check date, and if it is not during the season, exit function
     url = 'https://www.hockey-reference.com/leagues/NHL_2020_games.html'
+    # Run through BeautifulSoup steps
     uClient = Ureq(url)
     raw_content = uClient.read()
     page_soup = soup(raw_content, "html.parser")
@@ -18,6 +21,7 @@ def hockey_bet():
     game = html.findAll(class_ = 'left')
     game = [team.get_text() for team in game]
     drop_list = ['Date','Visitor','Home','Notes','']
+    # Clean data
     game = [game for game in game if game not in drop_list]
     bin_len = 3
     start = 0
@@ -30,6 +34,7 @@ def hockey_bet():
         week_list.append(week)
     df = pd.DataFrame(week_list)
     df.columns = ['Date','Visitor','Home']
+    # Clean team names into readable format
     row_count = 0
     visitor = df['Visitor'].str.split(" ", expand = True) 
     home = df['Home'].str.split(" ", expand = True) 
@@ -43,6 +48,7 @@ def hockey_bet():
         elif home[2][row_count] != None:
             df['Home'][row_count] = home[2][row_count]
         row_count += 1
+    # Only select todays games
     todays_date = datetime.now().strftime('%Y-%m-%d')
     todays_games = df[df['Date'] == todays_date]
     todays_games = todays_games.reset_index()

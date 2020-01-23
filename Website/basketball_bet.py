@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings('ignore')
 from IPython.display import clear_output
 
-
+# Set list/dict to clean team names in future dataframe
 teams_list = ['ATL','BRK','BOS','CHO','CHI','CLE','DAL','DEN','DET','GSW','HOU','IND','LAC','LAL','MEM','MIA','MIL','MIN','NOP','NYK','OKC','ORL','PHI','PHO','POR','SAC','SAS','TOR','UTA','WAS']
 teams_dict = {
     'Atlanta Hawks':'Hawks',
@@ -91,15 +91,19 @@ def basketball_bet():
         end = start + bin_len
         week_list.append(week)
     df = pd.DataFrame(week_list)
-    df.columns = ['Game_Time(EST)','Stat1','Stat2','Stat3']
-    df = df['Game_Time(EST)']
+    df.columns = ['Game_Time (EST)','Stat1','Stat2','Stat3']
+    df = df['Game_Time (EST)']
+    # Concat the dataframes to get desired data
     todays_games = pd.concat([df_1,df],axis = 1, join = 'inner')
     todays_games = todays_games[todays_games['Date'] == current_day]
+    # If there are no games being played, exit function
     if len(todays_games) == 0:
         print('There are currently no basketball games being played today.')
         return
+    # Clean team names into more readable forms
     todays_games = todays_games.reset_index()
-    todays_games = todays_games[['Visitor','Home','Game_Time(EST)']]
+    todays_games = todays_games[['Visitor','Home','Game_Time (EST)']]
     todays_games['Home'] = todays_games['Home'].apply(lambda x: teams_dict[x])
     todays_games['Visitor'] = todays_games['Visitor'].apply(lambda x: teams_dict[x])
+    # Return games being played today
     return todays_games

@@ -39,6 +39,7 @@ def place_bet(balance,check_user_info,user_index,user_info_dataframe):
     try:
         len(todays_games)
     except:
+        print('There are no games being played today.\n')
         return
     if len(todays_games) == 0:
         print('There are no games being played today.\n')
