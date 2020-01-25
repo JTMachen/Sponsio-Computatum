@@ -48,7 +48,7 @@ def place_bet(balance,check_user_info,user_index,user_info_dataframe):
     team = input('\nPlease type in the team that you would like to bet on: ')
     # Check to ensure that the team is playing today
     row_count = 0
-    while row_count < (len(todays_games)+1):
+    while row_count < (len(todays_games)):
         if todays_games['Visitor'][row_count] == team or todays_games['Home'][row_count] == team or todays_games['Home'][row_count].lower() == team or todays_games['Visitor'][row_count].lower() == team:
             row_count += 1000
         else:
@@ -80,8 +80,7 @@ def place_bet(balance,check_user_info,user_index,user_info_dataframe):
     if verification == 'y' or verification == 'yes' or verification == 'Y' or verification == 'Yes':
         new_balance = balance - bet_amount
         user_info_dataframe['BetCoins'][user_index] = new_balance
-        csv_path = Path('user_info_dataframe.csv')
-        user_info_dataframe.to_csv(csv_path)
+        user_info_dataframe.to_csv('user_info_dataframe.csv')
         transaction_history['Transactions'].append({
             'Username':check_user_info['Username'][user_index],
             'Transaction_Type': 'Placed_Bet',
@@ -89,6 +88,7 @@ def place_bet(balance,check_user_info,user_index,user_info_dataframe):
             'Transaction_Time': datetime.now().strftime('%m-%d-%y'),
             'Team_Bet': team.upper(),
             'Sport':sport.upper(),
+            'Status':'Unclaimed',
             '':''
         })
         with open('transaction_history.txt','w') as outfile:

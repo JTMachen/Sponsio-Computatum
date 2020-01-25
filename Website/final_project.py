@@ -3,7 +3,7 @@ import pandas as pd
 from path import Path
 import hashlib
 from datetime import datetime
-from Website import Place_Bet
+from Website import Place_Bet, secret, Calendar, basketball_win, hockey_win
 import json
 import pprint as pprint
 import warnings
@@ -15,7 +15,6 @@ import getpass
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from PIL import Image 
-from Website import secret
 
 
 # Create a Username and Password section for new users to input their new login information
@@ -149,7 +148,7 @@ def new_user():
     # Set a 'member since' column in dataframe
     member_since = datetime.now().strftime('%m-%d-%Y')
     # Append info to user info data frame
-    user_info_dataframe = user_info_dataframe.append({'BetCoins':100, 'Username':username, 'Password':password, 'Email_Address': user_email, 'User_Kovan_Testnet_Address': user_account_address, 'Member_Since': member_since} , ignore_index=True)
+    user_info_dataframe = user_info_dataframe.append({'BetCoins':100, 'Username':username, 'Password':password, 'Email_Address': user_email, 'User_Kovan_Testnet_Address': user_account_address, 'Member_Since': member_since, 'Last_Login': datetime.now().strftime('%m-%d-%Y')} , ignore_index=True)
     # Update the csv
     user_info_dataframe.to_csv('user_info_dataframe.csv')
     # Update JSON file
@@ -174,19 +173,48 @@ def account_actions(user_index,check_user_info,user_info_dataframe,username,pass
     imgplot.axes.get_yaxis().set_visible(False)
     plt.show(imgplot)
     
+    with open('transaction_history.txt') as json_file:
+        total_transaction_history = json.load(json_file)
+        transaction_history = total_transaction_history['Transactions']
+        transaction_count = 0
+        for item in transaction_history:
+            if item['Username'] == username and item['Transaction_Type'] == 'Placed_Bet' and item['Status'] == 'Unclaimed':
+                if item['Sport'] == 'HOCKEY':
+                    games = hockey_win.hockey_win(item['Transaction_Time'])
+                    for row in games['Winner']:
+                        if item['Team_Bet'] == row.upper():
+                            user_info_dataframe['BetCoins'][user_index] = user_info_dataframe['BetCoins'][user_index] + (int(item['Transaction_Amount']) * 1.5)                            
+                            user_info_dataframe.to_csv('user_info_dataframe.csv')
+                            total_transaction_history['Transactions'][transaction_count]['Status'] = 'Claimed'
+                    total_transaction_history['Transactions'][transaction_count]['Status'] = 'Claimed'
+                elif item['Sport'] == 'BASKETBALL':
+                    games = basketball_win.basketball_win(item['Transaction_Time'])
+                    for row in games['Winner']:
+                        if item['Team_Bet'] == row.upper():
+                            user_info_dataframe['BetCoins'][user_index] = user_info_dataframe['BetCoins'][user_index] + (item['Transaction_Amount'] * 1.5)
+                            addition = user_info_dataframe['BetCoins'][user_index] + (item['Transaction_Amount'] * 1.5)
+                            user_info_dataframe.to_csv('user_info_dataframe.csv')
+                            total_transaction_history['Transactions'][transaction_count]['Status'] = 'Claimed'
+                            print(f'You have won {addition} for your bet on the {item['Team_Bet']}')
+                    total_transaction_history['Transactions'][transaction_count]['Status'] = 'Claimed'    
+            transaction_count += 1
+    with open('transaction_history.txt','w') as outfile:
+        json.dump(total_transaction_history, outfile)
+    
     # Set clear_count for fun
     clear_count = 0
     # Set and initial action
     action = 'Initial'
     # Set user balance
-    balance = int(check_user_info['BetCoins'][user_index])
+    balance = int(user_info_dataframe['BetCoins'][user_index])
     # Set a list of actions that will exit the function
     exit_list = ['Exit','exit']
     # Set list of actions that will be printed for the user to choose from
-    action_list = ['Balance     ','Place_Bet','History     ','Leaderboard','Clear_Output','Update_Account','Exit']
+    action_list = ['Balance     ','Place_Bet','History     ','Leaderboard','Clear_Output','Update_Account','Calendar    ','Exit']
     # Set a loop that will keep running unless the user wants to exit function
     while action != 'Exit' or action != 'exit':
         # Open user dataframe
+        balance = int(user_info_dataframe['BetCoins'][user_index])
         csv_path = Path('user_info_dataframe.csv')
         user_info_dataframe = pd.read_csv(csv_path)
         user_info_dataframe.drop(columns = ['Unnamed: 0'],inplace=True)
@@ -200,12 +228,13 @@ def account_actions(user_index,check_user_info,user_info_dataframe,username,pass
                 print(action_list[list_count])
             list_count += 2
         action = input()
+        print('\n')
         # Once user selects an action, check it with the options below
         # If user selects 'Balance' show them their curreny balance
         if action == 'Balance' or action == 'balance':
-            balance = int(check_user_info['BetCoins'][user_index])
+            balance = int(user_info_dataframe['BetCoins'][user_index])
             print(f"Your account balance is {balance} BetCoins.")
-            print('You may also view your account balance in your Ethereum wallet.\n')
+            print('You may also view your token balance in your Ethereum wallet.\n')
             
         # Batman/Cat (If you know, you know)
         elif action == 'secret' or action == 'Secret':
@@ -215,7 +244,9 @@ def account_actions(user_index,check_user_info,user_info_dataframe,username,pass
         # If user selects 'Place_Bet' run that .py file
         elif action == 'Place_Bet' or action =='place_bet' or action == 'place bet' or action == 'Place Bet' or action == 'Place bet':
             new_balance = Place_Bet.place_bet(balance,check_user_info,user_index,user_info_dataframe)
-            check_user_info['BetCoins'][user_index] = new_balance
+            print(f"Your new account balance is {new_balance} BetCoins.")
+            user_info_dataframe['BetCoins'][user_index] = new_balance
+            user_info_dataframe.to_csv('user_info_dataframe.csv')
             
         # 'History' opens JSON file with every transaction
         elif action == 'History' or action == 'history':
@@ -241,7 +272,26 @@ def account_actions(user_index,check_user_info,user_info_dataframe,username,pass
             print(leaderboard_show)
             print('')
         
+        # Shows games being played today without making user place a bet
+        elif action == 'Calendar' or action == 'calendar':
+            todays_games = Calendar.calendar()
         
+        # Search balance of any username
+        elif action == 'Search' or action == 'search' or action == 'Search User' or action == 'search user' or action == 'Search user' or action == 'Search_User' or action == 'Search_user' or action == 'search_user':
+            search_attempt = 0
+            while search_attempt < 4:
+                search = input('Who are you looking for?\n')
+                search_df = user_info_dataframe[user_info_dataframe['Username'] == search]
+                if len(search_df) == 0:
+                    print('Sorry, but that username is not in our system. Please try again.')
+                    search_attempt += 1
+                else:
+                    print(search_df[['Username','BetCoins']])
+                    search_attempt += 10
+            if search_attempt == 4:
+                print('You have reached the maximum number of attempts. Please try again.')
+            
+            
         # Clears screen except for action choices and logo
         elif action =='Clear_Output' or action == 'Clear_output' or action == 'clear_output' or action == 'Clear Output' or action == 'Clear output' or action == 'clear output' or action == 'Clear' or action == 'clear':
             clear_output()
@@ -368,13 +418,15 @@ def returning_user():
         if user_password == password:
             password_count += 10
         elif user_password != password:
-            print('\nThe passwords that you entered is incorrect.')
+            print('\nThe password that you entered is incorrect.')
     # If max attempts reached, exit function
     if password_count == 4:
         print('You have exceeded the maximum number of attempts, please restart and try again.')
         return
     print('Loading Account...')
-    # Clear output and run 'account_actions' function
+    # Clear output, update last login, and run 'account_actions' function
+    user_info_dataframe['Last_Login'][user_index] = datetime.now().strftime('%m-%d-%Y')
+    user_info_dataframe.to_csv('user_info_dataframe.csv')
     clear_output()
     new_balance = account_actions(user_index,check_user_info,user_info_dataframe,username,password)
     
@@ -405,5 +457,11 @@ def user_interface():
             print(f'{user} is not a valid command. Please try again.')
         # If the user wants to exit the program, exit the program
         else:
+            clear_output()
+            img=mpimg.imread('Logo.png')
+            imgplot = plt.imshow(img)
+            imgplot.axes.get_xaxis().set_visible(False)
+            imgplot.axes.get_yaxis().set_visible(False)
+            plt.show(imgplot)
             print('Thank you for visiting Sponsio Computatum.')
             break
