@@ -184,6 +184,8 @@ def account_actions(user_index,check_user_info,user_info_dataframe,username,pass
                     for row in games['Winner']:
                         if item['Team_Bet'] == row.upper():
                             user_info_dataframe['BetCoins'][user_index] = user_info_dataframe['BetCoins'][user_index] + (int(item['Transaction_Amount']) * 1.5)                            
+                            addition = user_info_dataframe['BetCoins'][user_index] + (item['Transaction_Amount'] * 1.5)
+                            print(f"You have won {addition} for your bet on the {item['Team_Bet']}")
                             user_info_dataframe.to_csv('user_info_dataframe.csv')
                             total_transaction_history['Transactions'][transaction_count]['Status'] = 'Claimed'
                     total_transaction_history['Transactions'][transaction_count]['Status'] = 'Claimed'
@@ -195,7 +197,7 @@ def account_actions(user_index,check_user_info,user_info_dataframe,username,pass
                             addition = user_info_dataframe['BetCoins'][user_index] + (item['Transaction_Amount'] * 1.5)
                             user_info_dataframe.to_csv('user_info_dataframe.csv')
                             total_transaction_history['Transactions'][transaction_count]['Status'] = 'Claimed'
-                            print(f'You have won {addition} for your bet on the {item['Team_Bet']}')
+                            print(f"You have won {addition} for your bet on the {item['Team_Bet']}")
                     total_transaction_history['Transactions'][transaction_count]['Status'] = 'Claimed'    
             transaction_count += 1
     with open('transaction_history.txt','w') as outfile:
